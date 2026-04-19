@@ -1,0 +1,67 @@
+# {{title}}
+
+{{#if effectiveEntries.length}}
+{{#each effectiveEntries}}
+!!! info "Effective Date(s) & Overall Applicability for {{versionLabel}}"
+    - **{{statusLabel}}**{{#if currentStatus}} ({{currentStatus}}){{/if}}
+{{#each dateLines}}
+    - **{{label}}:** {{value}}
+{{/each}}
+{{#if signupUrl}}
+    - **Sign-up Form:** [{{signupUrl}}]({{signupUrl}})
+{{/if}}
+{{#each comments}}
+    - {{this}}
+{{/each}}
+
+{{#if warnings.length}}
+!!! danger "Mandatory Adoption for {{versionLabel}}"
+{{#each warnings}}
+    - {{this}}
+{{/each}}
+
+{{/if}}
+{{/each}}
+{{/if}}
+
+{{#if authority.length}}
+??? abstract "Background & Authority"
+{{#each authority}}
+    - {{#if referenceUrl}}[{{reference}}]({{referenceUrl}}){{else}}{{reference}}{{/if}}{{#if description}} {{description}}{{/if}}{{#if delegation}} Delegation: {{#if delegationUrl}}[{{delegation}}]({{delegationUrl}}){{else}}{{delegation}}{{/if}}.{{/if}}
+{{/each}}
+
+{{/if}}
+{{#if purposeParagraphs.length}}
+{{#each purposeParagraphs}}
+{{this}}
+
+{{/each}}
+{{/if}}
+
+{{#unless isKsiDocument}}
+---
+{{/unless}}
+
+{{#if isDefinitionDocument}}
+{{#each definitions}}
+{{> definition}}
+{{/each}}
+{{/if}}
+
+{{#if isRequirementsDocument}}
+{{#each sections}}
+{{> section}}
+{{/each}}
+{{/if}}
+
+{{#if isKsiDocument}}
+!!! info ""
+{{#each themeParagraphs}}
+    {{this}}
+    
+{{/each}}
+
+{{#each indicators}}
+{{> requirement}}
+{{/each}}
+{{/if}}

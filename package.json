@@ -3,12 +3,18 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "sync:rules": "./scripts/sync-rules-submodule.sh"
+    "build": "bun run scripts/build-markdown.ts",
+    "dev": "bun run scripts/dev.ts",
+    "sync:rules": "./scripts/sync-rules-submodule.sh",
+    "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "handlebars": "^4.7.9"
   }
 }

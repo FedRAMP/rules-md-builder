@@ -1,3 +1,7 @@
+output/
+.zensical/
+
+
 # Logs
 logs
 *.log
