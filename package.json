@@ -1,0 +1,14 @@
+{
+  "name": "rules-md-builder",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sync:rules": "./scripts/sync-rules-submodule.sh"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
