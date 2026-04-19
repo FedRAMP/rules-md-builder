@@ -5,7 +5,7 @@
   "scripts": {
     "build": "bun run scripts/build-markdown.ts",
     "dev": "bun run scripts/dev.ts",
-    "sync:rules": "./scripts/sync-rules-submodule.sh",
+    "sync": "./scripts/sync-rules-submodule.sh",
     "test": "bun test"
   },
   "devDependencies": {

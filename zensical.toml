@@ -1,7 +1,7 @@
 [project]
 site_name = "FedRAMP Rules Markdown Dev Preview"
 site_url = "http://localhost:8000"
-site_description = "Preview the generated FedRAMP rules markdown output."
+site_description = "Preview the generated FedRAMP rules markdown output, not for actual use."
 docs_dir = "output"
 site_dir = ".zensical/site"
 dev_addr = "localhost:8000"

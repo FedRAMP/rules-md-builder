@@ -14,10 +14,10 @@ To install dependencies:
 bun install
 ```
 
-To sync the upstream dependency locally and re-apply sparse checkout:
+To sync the upstream rules submodule locally and re-apply sparse checkout:
 
 ```bash
-bun run sync:rules
+bun run sync
 ```
 
 To generate markdown into `output/`:
