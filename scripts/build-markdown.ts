@@ -542,7 +542,7 @@ function buildPreviewIndex(artifacts: BuildArtifact[]): string {
   const lines = [
     "# FedRAMP Rules Preview",
     "",
-    "This page is generated only to make local Zensical review easier.",
+    "This page is generated only for quick previewing of markdown files as the Consolidated Rules are edited, it is NOT a final format or structure and only shows rules generated from JSON source.",
     "",
     "Use the sidebar to browse everything under `output/`, or jump in here:",
     "",
