@@ -1,5 +1,5 @@
 [submodule "fedramp-rules"]
 	path = rules
 	url = https://github.com/FedRAMP/rules.git
-	branch = pwx-buildout2
+	branch = pwx
 	shallow = true

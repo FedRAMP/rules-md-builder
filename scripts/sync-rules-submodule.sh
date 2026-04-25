@@ -4,7 +4,7 @@ set -euo pipefail
 
 readonly RULES_PATH="rules"
 readonly RULES_MODULE="fedramp-rules"
-readonly RULES_BRANCH="pwx-buildout2"
+readonly RULES_BRANCH="pwx"
 
 git submodule sync --recursive "${RULES_PATH}"
 git config "submodule.${RULES_MODULE}.branch" "${RULES_BRANCH}"
