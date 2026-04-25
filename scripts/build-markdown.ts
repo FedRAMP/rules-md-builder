@@ -148,6 +148,7 @@ interface DefinitionEntrySource {
   definition?: string;
   note?: string;
   notes?: string[];
+  tag?: string;
   reference?: string;
   reference_url?: string;
   referenceurl?: string;
@@ -273,6 +274,11 @@ interface DefinitionViewModel {
   alternateTerms: string[];
 }
 
+interface DefinitionSectionViewModel {
+  title: string;
+  definitions: DefinitionViewModel[];
+}
+
 interface SectionViewModel {
   title: string;
   descriptionParagraphs: string[];
@@ -287,7 +293,7 @@ interface DocumentViewModel {
   isDefinitionDocument: boolean;
   isRequirementsDocument: boolean;
   isKsiDocument: boolean;
-  definitions: DefinitionViewModel[];
+  definitionSections: DefinitionSectionViewModel[];
   sections: SectionViewModel[];
   themeParagraphs: string[];
   indicators: RequirementViewModel[];
@@ -676,6 +682,45 @@ function buildDefinitionViewModel(
   };
 }
 
+function buildDefinitionSectionViewModels(
+  entries: Record<string, DefinitionEntrySource> = {},
+): DefinitionSectionViewModel[] {
+  const generalDefinitions: DefinitionViewModel[] = [];
+  const taggedDefinitions = new Map<string, DefinitionViewModel[]>();
+
+  for (const [id, entry] of Object.entries(entries)) {
+    const definition = buildDefinitionViewModel(id, entry);
+    const tag = entry.tag?.trim();
+
+    if (!tag) {
+      generalDefinitions.push(definition);
+      continue;
+    }
+
+    const definitions = taggedDefinitions.get(tag) ?? [];
+    definitions.push(definition);
+    taggedDefinitions.set(tag, definitions);
+  }
+
+  const sections: DefinitionSectionViewModel[] = [
+    {
+      title: "General Terms",
+      definitions: generalDefinitions,
+    },
+  ];
+
+  for (const [tag, definitions] of Array.from(taggedDefinitions.entries()).sort(
+    ([left], [right]) => left.localeCompare(right),
+  )) {
+    sections.push({
+      title: `Specific Terms: ${tag}`,
+      definitions,
+    });
+  }
+
+  return sections;
+}
+
 function buildSectionViewModels(
   document: RequirementDocumentSource,
   version: Version,
@@ -729,7 +774,7 @@ function buildDocumentContext(
     isDefinitionDocument: options.isDefinitionDocument ?? false,
     isRequirementsDocument: options.isRequirementsDocument ?? false,
     isKsiDocument: options.isKsiDocument ?? false,
-    definitions: options.definitions ?? [],
+    definitionSections: options.definitionSections ?? [],
     sections: options.sections ?? [],
     themeParagraphs: options.themeParagraphs ?? [],
     indicators: options.indicators ?? [],
@@ -842,8 +887,8 @@ export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
       authority,
       purposeParagraphs,
       isDefinitionDocument: true,
-      definitions: Object.entries(rules.FRD.data.both ?? {}).map(
-        ([id, entry]) => buildDefinitionViewModel(id, entry),
+      definitionSections: buildDefinitionSectionViewModels(
+        rules.FRD.data.both,
       ),
     }),
   });

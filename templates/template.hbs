@@ -49,8 +49,12 @@
 {{/unless}}
 
 {{#if isDefinitionDocument}}
+{{#each definitionSections}}
+## {{title}}
+
 {{#each definitions}}
 {{> definition}}
+{{/each}}
 {{/each}}
 {{/if}}
 

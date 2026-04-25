@@ -62,6 +62,22 @@ describe("build-markdown", () => {
     );
     expect(definitionsContents).toContain('??? abstract "Background & Authority"');
     expect(definitionsContents).toContain('!!! quote ""');
+    const definitionSectionHeaders = Array.from(
+      definitionsContents.matchAll(/^## (.+)$/gm),
+      (match) => match[1],
+    );
+    const definitionTags = Array.from(
+      new Set(
+        Object.values(rules.FRD.data.both ?? {})
+          .map((entry) => entry.tag?.trim())
+          .filter((tag): tag is string => Boolean(tag)),
+      ),
+    ).sort((left, right) => left.localeCompare(right));
+    expect(definitionSectionHeaders).toEqual([
+      "General Terms",
+      ...definitionTags.map((tag) => `Specific Terms: ${tag}`),
+    ]);
+    expect(definitionsContents).toContain("## Specific Terms: Vulnerabilities");
 
     const previewIndexContents = await readFile(
       path.join(OUTPUT_DIR, "index.md"),
