@@ -18,8 +18,11 @@
 !!! abstract "{{id}}"
 {{/if}}
 
-{{#if notification}}
+{{#if notifications.length}}
 !!! warning "This FRR includes a notification requirement!"
+{{#each notifications}}
+    - Notify {{party}} by {{method}} using {{target}}.
+{{/each}}
 {{/if}}
 
 !!! quote ""
@@ -27,8 +30,15 @@
     {{this}}
 
 {{/each}}
-{{#if affects.length}}
-    **Affects:** {{#each affects}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{#if timeframe}}
+    **Timeframe:** {{timeframe}}
+
+{{/if}}
+{{#if effectiveDateLines.length}}
+    **Effective Date(s):**
+{{#each effectiveDateLines}}
+    - **{{label}}:** {{value}}
+{{/each}}
 
 {{/if}}
 {{#each variantSections}}
@@ -37,11 +47,22 @@
         {{this}}
 
 {{/each}}
-{{#if painTimeframes.length}}
-        | Potential Adverse Impact | LEV + IRV | LEV + NIRV | NLEV |
-        |-------------------------|-----------|------------|------|
-{{#each painTimeframes}}
-        | N{{pain}} | {{maxDaysIrvLev}} | {{maxDaysNirvLev}} | {{maxDaysNlev}} |
+{{#if timeframe}}
+        **Timeframe:** {{timeframe}}
+
+{{/if}}
+{{#if effectiveDateLines.length}}
+        **Effective Date(s):**
+{{#each effectiveDateLines}}
+        - **{{label}}:** {{value}}
+{{/each}}
+
+{{/if}}
+{{#if painTimeframeRows.length}}
+        | Potential Adverse Impact |{{#each painTimeframeColumns}} {{label}} |{{/each}}
+        |--------------------------|{{#each painTimeframeColumns}}---|{{/each}}
+{{#each painTimeframeRows}}
+        | N{{pain}} |{{#each cells}} {{this}} |{{/each}}
 {{/each}}
 
 {{/if}}
@@ -55,6 +76,13 @@
 {{#if bulletItems.length}}
 {{#each bulletItems}}
     - {{this}}
+{{/each}}
+
+{{/if}}
+{{#if correctiveActions.length}}
+    !!! warning "Corrective Actions"
+{{#each correctiveActions}}
+        - {{this}}
 {{/each}}
 
 {{/if}}
@@ -87,6 +115,7 @@
 {{#if reference}}
 
     **Reference:** [{{reference.label}}]({{reference.url}})
+
 {{/if}}
 {{#if examples.length}}
 {{#each examples}}
@@ -113,4 +142,3 @@
     ---
     **Terms:** {{#each terms}}[{{label}}]({{href}}){ data-preview }{{#unless @last}}, {{/unless}}{{/each}}
 {{/if}}
-
