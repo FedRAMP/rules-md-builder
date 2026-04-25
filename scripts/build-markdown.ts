@@ -18,6 +18,12 @@ export const OUTPUT_DIR = path.join(ROOT_DIR, "output");
 type Version = "20x" | "rev5";
 
 interface RulesDocument {
+  info?: {
+    title?: string;
+    description?: string;
+    version?: string;
+    last_updated?: string;
+  };
   FRD: DefinitionsSource;
   FRR: Record<string, RequirementDocumentSource>;
   KSI: Record<string, KsiThemeSource>;
@@ -34,7 +40,14 @@ interface AuthoritySource {
 interface EffectiveEntrySource {
   is?: string;
   current_status?: string;
-  date?: Record<string, string>;
+  date?: Record<string, number | string>;
+  class?: Record<
+    string,
+    {
+      applies_in_full?: boolean;
+      applies?: string[];
+    }
+  >;
   comments?: string[];
   signup_url?: string;
   warnings?: string[];
@@ -66,14 +79,35 @@ interface ExampleSource {
   examples?: string[];
 }
 
+interface LegacyPainTimeframeSource {
+  pain?: number | string;
+  max_days_irv_lev?: number | string;
+  max_days_nirv_lev?: number | string;
+  max_days_nlev?: number | string;
+}
+
+interface PainTimeframeEntrySource {
+  timeframe_type?: string;
+  timeframe_num?: number | string;
+  description?: string;
+}
+
+type PainTimeframesSource =
+  | LegacyPainTimeframeSource[]
+  | Record<string, Record<string, PainTimeframeEntrySource>>;
+
 interface VariantSource {
   statement?: string;
-  pain_timeframes?: Array<{
-    pain?: number | string;
-    max_days_irv_lev?: number | string;
-    max_days_nirv_lev?: number | string;
-    max_days_nlev?: number | string;
-  }>;
+  effective_date?: Record<string, number | string>;
+  timeframe_type?: string;
+  timeframe_num?: number | string;
+  pain_timeframes?: PainTimeframesSource;
+}
+
+interface NotificationSource {
+  party?: string;
+  method?: string;
+  target?: string;
 }
 
 interface RequirementEntrySource {
@@ -83,14 +117,19 @@ interface RequirementEntrySource {
   following_information_bullets?: string[];
   varies_by_class?: Record<string, VariantSource>;
   varies_by_level?: Record<string, VariantSource>;
+  effective_date?: Record<string, number | string>;
+  timeframe_type?: string;
+  timeframe_num?: number | string;
   note?: string;
   notes?: string[];
   danger?: string;
-  notification?: boolean;
+  notification?: NotificationSource[];
+  corrective_actions?: string[];
   affects?: string[];
   controls?: string[];
   reference?: string;
   reference_url?: string;
+  reference_url_web_name?: string;
   terms?: string[];
   examples?: ExampleSource[];
   updated?: ChangeLogSource[];
@@ -111,6 +150,7 @@ interface DefinitionEntrySource {
   notes?: string[];
   reference?: string;
   reference_url?: string;
+  referenceurl?: string;
   alts?: string[];
   updated?: ChangeLogSource[];
   fka?: string;
@@ -140,6 +180,7 @@ interface EffectiveEntryViewModel {
   statusLabel: string;
   currentStatus?: string;
   dateLines: Array<{ label: string; value: string }>;
+  classLines: Array<{ label: string; value: string }>;
   comments: string[];
   signupUrl?: string;
   warnings: string[];
@@ -153,17 +194,22 @@ interface AuthorityViewModel {
   delegationUrl?: string;
 }
 
-interface PainTimeframeViewModel {
+interface PainTimeframeColumnViewModel {
+  label: string;
+}
+
+interface PainTimeframeRowViewModel {
   pain: string;
-  maxDaysIrvLev: string;
-  maxDaysNirvLev: string;
-  maxDaysNlev: string;
+  cells: string[];
 }
 
 interface VariantViewModel {
   title: string;
   statementParagraphs: string[];
-  painTimeframes: PainTimeframeViewModel[];
+  effectiveDateLines: Array<{ label: string; value: string }>;
+  timeframe?: string;
+  painTimeframeColumns: PainTimeframeColumnViewModel[];
+  painTimeframeRows: PainTimeframeRowViewModel[];
 }
 
 interface ExampleViewModel {
@@ -177,6 +223,12 @@ interface TermLinkViewModel {
   href: string;
 }
 
+interface NotificationViewModel {
+  party: string;
+  method: string;
+  target: string;
+}
+
 interface RequirementViewModel {
   id: string;
   title: string;
@@ -188,12 +240,15 @@ interface RequirementViewModel {
   }>;
   statementParagraphs: string[];
   variantSections: VariantViewModel[];
+  effectiveDateLines: Array<{ label: string; value: string }>;
+  timeframe?: string;
   numberedItems: string[];
   bulletItems: string[];
   noteParagraphs: string[];
   notes: string[];
   dangerParagraphs: string[];
-  notification: boolean;
+  notifications: NotificationViewModel[];
+  correctiveActions: string[];
   affects: string[];
   controlLinks: Array<{ label: string; url: string }>;
   reference?: { label: string; url: string };
@@ -319,6 +374,26 @@ function toAuthorityViewModel(
   }));
 }
 
+function toDateLines(
+  date: Record<string, number | string> | undefined,
+): Array<{ label: string; value: string }> {
+  return Object.entries(date ?? {}).map(([key, value]) => ({
+    label: titleCase(key),
+    value: String(value),
+  }));
+}
+
+function toClassApplicabilityLines(
+  classes: EffectiveEntrySource["class"],
+): Array<{ label: string; value: string }> {
+  return Object.entries(classes ?? {}).map(([className, entry]) => ({
+    label: `Class ${className.toUpperCase()}`,
+    value: entry.applies_in_full
+      ? "Applies in full"
+      : `Limited to ${entry.applies?.join(", ") ?? "specified requirements"}`,
+  }));
+}
+
 function toEffectiveEntries(
   effective: Partial<Record<Version, EffectiveEntrySource>> | undefined,
   versions: Version[],
@@ -334,10 +409,8 @@ function toEffectiveEntries(
         versionLabel: humanizeVersion(version),
         statusLabel: humanizeStatus(entry.is),
         currentStatus: entry.current_status,
-        dateLines: Object.entries(entry.date ?? {}).map(([key, value]) => ({
-          label: titleCase(key),
-          value,
-        })),
+        dateLines: toDateLines(entry.date),
+        classLines: toClassApplicabilityLines(entry.class),
         comments: entry.comments ?? [],
         signupUrl: entry.signup_url,
         warnings: entry.warnings ?? [],
@@ -356,6 +429,111 @@ function toChangeLog(updated: ChangeLogSource[] = []) {
     }));
 }
 
+function formatDuration(
+  timeframeType: string | undefined,
+  timeframeNum: number | string | undefined,
+): string {
+  if (timeframeNum === undefined) {
+    return "";
+  }
+
+  const amount = String(timeframeNum);
+
+  if (timeframeType === "bizdays") {
+    return `${amount} business ${amount === "1" ? "day" : "days"}`;
+  }
+
+  if (timeframeType === "days") {
+    return `${amount} ${amount === "1" ? "day" : "days"}`;
+  }
+
+  if (timeframeType === "month" || timeframeType === "months") {
+    return `${amount} ${amount === "1" ? "month" : "months"}`;
+  }
+
+  return timeframeType ? `${amount} ${timeframeType}` : amount;
+}
+
+function formatTimeframe(entry?: PainTimeframeEntrySource): string {
+  return formatDuration(entry?.timeframe_type, entry?.timeframe_num);
+}
+
+function painTimeframeColumnLabel(key: string): string {
+  const labels: Record<string, string> = {
+    fir: "Final Incident Report",
+    iir: "Initial Incident Report",
+    irv_lev: "LEV + IRV",
+    nirv_lev: "LEV + NIRV",
+    nlev: "NLEV",
+    oir: "Ongoing Incident Report",
+  };
+
+  return labels[key] ?? titleCase(key);
+}
+
+function normalizePainTimeframes(
+  painTimeframes?: PainTimeframesSource,
+): Pick<VariantViewModel, "painTimeframeColumns" | "painTimeframeRows"> {
+  if (!painTimeframes) {
+    return { painTimeframeColumns: [], painTimeframeRows: [] };
+  }
+
+  if (Array.isArray(painTimeframes)) {
+    return {
+      painTimeframeColumns: [
+        { label: "LEV + IRV" },
+        { label: "LEV + NIRV" },
+        { label: "NLEV" },
+      ],
+      painTimeframeRows: painTimeframes.map((timeframe) => ({
+        pain: String(timeframe.pain ?? ""),
+        cells: [
+          String(timeframe.max_days_irv_lev ?? ""),
+          String(timeframe.max_days_nirv_lev ?? ""),
+          String(timeframe.max_days_nlev ?? ""),
+        ],
+      })),
+    };
+  }
+
+  const columnOrder = ["irv_lev", "nirv_lev", "nlev", "iir", "oir", "fir"];
+  const columnKeys = Array.from(
+    new Set(
+      Object.values(painTimeframes).flatMap((group) => Object.keys(group)),
+    ),
+  ).sort((left, right) => {
+    const leftIndex = columnOrder.indexOf(left);
+    const rightIndex = columnOrder.indexOf(right);
+
+    if (leftIndex === -1 && rightIndex === -1) {
+      return left.localeCompare(right);
+    }
+
+    if (leftIndex === -1) {
+      return 1;
+    }
+
+    if (rightIndex === -1) {
+      return -1;
+    }
+
+    return leftIndex - rightIndex;
+  });
+
+  return {
+    painTimeframeColumns: columnKeys.map((key) => ({
+      label: painTimeframeColumnLabel(key),
+    })),
+    painTimeframeRows: Object.entries(painTimeframes)
+      .sort(([left], [right]) => Number(right) - Number(left))
+      .map(([pain, group]) => ({
+        pain,
+        cells: columnKeys.map((key) => formatTimeframe(group[key])),
+      }))
+      .filter((row) => row.cells.some(Boolean)),
+  };
+}
+
 function buildVariantSections(
   entry: RequirementEntrySource,
 ): VariantViewModel[] {
@@ -364,34 +542,67 @@ function buildVariantSections(
   for (const [className, classEntry] of Object.entries(
     entry.varies_by_class ?? {},
   )) {
+    const painTimeframes = normalizePainTimeframes(classEntry.pain_timeframes);
+
     sections.push({
       title: `Class ${className.toUpperCase()}`,
       statementParagraphs: splitParagraphs(classEntry.statement),
-      painTimeframes: (classEntry.pain_timeframes ?? []).map((timeframe) => ({
-        pain: String(timeframe.pain ?? ""),
-        maxDaysIrvLev: String(timeframe.max_days_irv_lev ?? ""),
-        maxDaysNirvLev: String(timeframe.max_days_nirv_lev ?? ""),
-        maxDaysNlev: String(timeframe.max_days_nlev ?? ""),
-      })),
+      effectiveDateLines: toDateLines(classEntry.effective_date),
+      timeframe: formatDuration(classEntry.timeframe_type, classEntry.timeframe_num),
+      ...painTimeframes,
     });
   }
 
   for (const [levelName, levelEntry] of Object.entries(
     entry.varies_by_level ?? {},
   )) {
+    const painTimeframes = normalizePainTimeframes(levelEntry.pain_timeframes);
+
     sections.push({
       title: titleCase(levelName),
       statementParagraphs: splitParagraphs(levelEntry.statement),
-      painTimeframes: (levelEntry.pain_timeframes ?? []).map((timeframe) => ({
-        pain: String(timeframe.pain ?? ""),
-        maxDaysIrvLev: String(timeframe.max_days_irv_lev ?? ""),
-        maxDaysNirvLev: String(timeframe.max_days_nirv_lev ?? ""),
-        maxDaysNlev: String(timeframe.max_days_nlev ?? ""),
-      })),
+      effectiveDateLines: toDateLines(levelEntry.effective_date),
+      timeframe: formatDuration(levelEntry.timeframe_type, levelEntry.timeframe_num),
+      ...painTimeframes,
     });
   }
 
   return sections;
+}
+
+function toNotifications(
+  notifications: NotificationSource[] = [],
+): NotificationViewModel[] {
+  return notifications.map((notification) => ({
+    party: notification.party ?? "",
+    method: notification.method ?? "",
+    target: notification.target ?? "",
+  }));
+}
+
+function buildRequirementReference(
+  entry: RequirementEntrySource,
+  rulesRelativePath: string,
+): RequirementViewModel["reference"] {
+  if (!entry.reference) {
+    return undefined;
+  }
+
+  if (entry.reference_url) {
+    return {
+      label: entry.reference,
+      url: entry.reference_url,
+    };
+  }
+
+  if (entry.reference_url_web_name) {
+    return {
+      label: entry.reference,
+      url: `${rulesRelativePath}${entry.reference_url_web_name}/`,
+    };
+  }
+
+  return undefined;
 }
 
 function buildTermLinks(
@@ -408,6 +619,7 @@ function buildRequirementViewModel(
   id: string,
   entry: RequirementEntrySource,
   definitionsRelativePath: string,
+  rulesRelativePath: string,
 ): RequirementViewModel {
   return {
     id,
@@ -416,24 +628,21 @@ function buildRequirementViewModel(
     changelog: toChangeLog(entry.updated),
     statementParagraphs: splitParagraphs(entry.statement),
     variantSections: buildVariantSections(entry),
+    effectiveDateLines: toDateLines(entry.effective_date),
+    timeframe: formatDuration(entry.timeframe_type, entry.timeframe_num),
     numberedItems: entry.following_information ?? [],
     bulletItems: entry.following_information_bullets ?? [],
     noteParagraphs: splitParagraphs(entry.note),
     notes: entry.notes ?? [],
     dangerParagraphs: splitParagraphs(entry.danger),
-    notification: Boolean(entry.notification),
+    notifications: toNotifications(entry.notification),
+    correctiveActions: entry.corrective_actions ?? [],
     affects: entry.affects ?? [],
     controlLinks: (entry.controls ?? []).map((controlId) => ({
       label: controlId.toUpperCase(),
       url: controlUrl(controlId),
     })),
-    reference:
-      entry.reference && entry.reference_url
-        ? {
-            label: entry.reference,
-            url: entry.reference_url,
-          }
-        : undefined,
+    reference: buildRequirementReference(entry, rulesRelativePath),
     examples: (entry.examples ?? []).map((example) => ({
       title: example.id ?? "Example",
       keyTests: example.key_tests ?? [],
@@ -457,10 +666,10 @@ function buildDefinitionViewModel(
     noteParagraphs: splitParagraphs(entry.note),
     notes: entry.notes ?? [],
     reference:
-      entry.reference && entry.reference_url
+      entry.reference && (entry.reference_url || entry.referenceurl)
         ? {
             label: entry.reference,
-            url: entry.reference_url,
+            url: entry.reference_url ?? entry.referenceurl ?? "",
           }
         : undefined,
     alternateTerms: entry.alts ?? [],
@@ -471,6 +680,7 @@ function buildSectionViewModels(
   document: RequirementDocumentSource,
   version: Version,
   definitionsRelativePath: string,
+  rulesRelativePath: string,
 ): SectionViewModel[] {
   const sections = new Map<string, SectionViewModel>();
 
@@ -491,7 +701,12 @@ function buildSectionViewModels(
 
       for (const [id, requirement] of Object.entries(requirements)) {
         section.requirements.push(
-          buildRequirementViewModel(id, requirement, definitionsRelativePath),
+          buildRequirementViewModel(
+            id,
+            requirement,
+            definitionsRelativePath,
+            rulesRelativePath,
+          ),
         );
       }
 
@@ -662,6 +877,7 @@ export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
             document,
             version,
             "../definitions/",
+            "",
           ),
         }),
       });
@@ -687,7 +903,7 @@ export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
         isKsiDocument: true,
         themeParagraphs: splitParagraphs(theme.theme),
         indicators: Object.entries(theme.indicators).map(([id, entry]) =>
-          buildRequirementViewModel(id, entry, "../../definitions/"),
+          buildRequirementViewModel(id, entry, "../../definitions/", "../"),
         ),
       }),
     });

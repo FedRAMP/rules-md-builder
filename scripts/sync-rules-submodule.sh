@@ -2,9 +2,17 @@
 
 set -euo pipefail
 
-git submodule sync --recursive
-git submodule update --init --remote --depth 1 rules
+readonly RULES_PATH="rules"
+readonly RULES_MODULE="fedramp-rules"
+readonly RULES_BRANCH="pwx-buildout2"
 
-# Keep the submodule working tree focused on the one upstream artifact this repo consumes.
-git -C rules sparse-checkout init --no-cone
-git -C rules sparse-checkout set --no-cone /fedramp-consolidated-rules.json
+git submodule sync --recursive "${RULES_PATH}"
+git config "submodule.${RULES_MODULE}.branch" "${RULES_BRANCH}"
+git submodule update --init --remote --depth 1 --checkout "${RULES_PATH}"
+git -C "${RULES_PATH}" checkout -B "${RULES_BRANCH}" "origin/${RULES_BRANCH}"
+
+# Keep the submodule working tree focused on the upstream artifacts this repo consumes.
+git -C "${RULES_PATH}" sparse-checkout init --no-cone
+git -C "${RULES_PATH}" sparse-checkout set --no-cone \
+  /fedramp-consolidated-rules.json \
+  /schemas/fedramp-consolidated-rules.schema.json

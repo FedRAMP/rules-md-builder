@@ -7,6 +7,12 @@
 {{#each dateLines}}
     - **{{label}}:** {{value}}
 {{/each}}
+{{#if classLines.length}}
+    - **Class Applicability:**
+{{#each classLines}}
+        - **{{label}}:** {{value}}
+{{/each}}
+{{/if}}
 {{#if signupUrl}}
     - **Sign-up Form:** [{{signupUrl}}]({{signupUrl}})
 {{/if}}
