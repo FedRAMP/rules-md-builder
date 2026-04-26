@@ -29,14 +29,6 @@ interface RulesDocument {
   KSI: Record<string, KsiThemeSource>;
 }
 
-interface AuthoritySource {
-  description?: string;
-  reference?: string;
-  reference_url?: string;
-  delegation?: string;
-  delegation_url?: string;
-}
-
 interface EffectiveEntrySource {
   is?: string;
   current_status?: string;
@@ -53,17 +45,11 @@ interface EffectiveEntrySource {
   warnings?: string[];
 }
 
-interface FrontMatterSource {
-  authority?: AuthoritySource[];
-  purpose?: string;
-}
-
 interface InfoSource {
   name: string;
   short_name?: string;
   web_name: string;
   effective?: Partial<Record<Version, EffectiveEntrySource>>;
-  front_matter?: FrontMatterSource;
   labels?: Record<string, { name?: string; description?: string }>;
 }
 
@@ -187,14 +173,6 @@ interface EffectiveEntryViewModel {
   warnings: string[];
 }
 
-interface AuthorityViewModel {
-  description?: string;
-  reference?: string;
-  referenceUrl?: string;
-  delegation?: string;
-  delegationUrl?: string;
-}
-
 interface PainTimeframeColumnViewModel {
   label: string;
 }
@@ -288,8 +266,6 @@ interface SectionViewModel {
 interface DocumentViewModel {
   title: string;
   effectiveEntries: EffectiveEntryViewModel[];
-  authority: AuthorityViewModel[];
-  purposeParagraphs: string[];
   isDefinitionDocument: boolean;
   isRequirementsDocument: boolean;
   isKsiDocument: boolean;
@@ -368,18 +344,6 @@ function controlUrl(controlId: string): string {
   return `${CONTROL_FREAK_BASE_URL}${prefix.toUpperCase()}-${number.padStart(2, "0")}`;
 }
 
-function toAuthorityViewModel(
-  authority: AuthoritySource[] = [],
-): AuthorityViewModel[] {
-  return authority.map((entry) => ({
-    description: entry.description,
-    reference: entry.reference,
-    referenceUrl: entry.reference_url,
-    delegation: entry.delegation,
-    delegationUrl: entry.delegation_url,
-  }));
-}
-
 function toDateLines(
   date: Record<string, number | string> | undefined,
 ): Array<{ label: string; value: string }> {
@@ -405,22 +369,30 @@ function toEffectiveEntries(
   versions: Version[],
 ): EffectiveEntryViewModel[] {
   return versions
-    .map((version) => {
+    .map((version): EffectiveEntryViewModel | null => {
       const entry = effective?.[version];
       if (!entry) {
         return null;
       }
 
-      return {
+      const viewModel: EffectiveEntryViewModel = {
         versionLabel: humanizeVersion(version),
         statusLabel: humanizeStatus(entry.is),
-        currentStatus: entry.current_status,
         dateLines: toDateLines(entry.date),
         classLines: toClassApplicabilityLines(entry.class),
         comments: entry.comments ?? [],
-        signupUrl: entry.signup_url,
         warnings: entry.warnings ?? [],
       };
+
+      if (entry.current_status) {
+        viewModel.currentStatus = entry.current_status;
+      }
+
+      if (entry.signup_url) {
+        viewModel.signupUrl = entry.signup_url;
+      }
+
+      return viewModel;
     })
     .filter((entry): entry is EffectiveEntryViewModel => entry !== null);
 }
@@ -769,8 +741,6 @@ function buildDocumentContext(
   return {
     title,
     effectiveEntries: options.effectiveEntries ?? [],
-    authority: options.authority ?? [],
-    purposeParagraphs: options.purposeParagraphs ?? [],
     isDefinitionDocument: options.isDefinitionDocument ?? false,
     isRequirementsDocument: options.isRequirementsDocument ?? false,
     isKsiDocument: options.isKsiDocument ?? false,
@@ -867,12 +837,6 @@ export async function loadRules(): Promise<RulesDocument> {
 
 export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
   const artifacts: BuildArtifact[] = [];
-  const authority = toAuthorityViewModel(
-    rules.FRD.info.front_matter?.authority,
-  );
-  const purposeParagraphs = splitParagraphs(
-    rules.FRD.info.front_matter?.purpose,
-  );
 
   artifacts.push({
     relativePath: "definitions.md",
@@ -884,8 +848,6 @@ export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
         "20x",
         "rev5",
       ]),
-      authority,
-      purposeParagraphs,
       isDefinitionDocument: true,
       definitionSections: buildDefinitionSectionViewModels(
         rules.FRD.data.both,
@@ -894,8 +856,6 @@ export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
   });
 
   for (const document of Object.values(rules.FRR)) {
-    const frontMatter = document.info.front_matter;
-
     for (const version of ["20x", "rev5"] as const) {
       const effectiveEntry = document.info.effective?.[version];
       if (!isApplicable(effectiveEntry)) {
@@ -915,8 +875,6 @@ export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
           effectiveEntries: toEffectiveEntries(document.info.effective, [
             version,
           ]),
-          authority: toAuthorityViewModel(frontMatter?.authority),
-          purposeParagraphs: splitParagraphs(frontMatter?.purpose),
           isRequirementsDocument: true,
           sections: buildSectionViewModels(
             document,

@@ -60,7 +60,9 @@ describe("build-markdown", () => {
       path.join(OUTPUT_DIR, "definitions.md"),
       "utf8",
     );
-    expect(definitionsContents).toContain('??? abstract "Background & Authority"');
+    expect(definitionsContents).not.toContain(
+      '??? abstract "Background & Authority"',
+    );
     expect(definitionsContents).toContain('!!! quote ""');
     const definitionSectionHeaders = Array.from(
       definitionsContents.matchAll(/^## (.+)$/gm),
