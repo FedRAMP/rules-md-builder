@@ -16,6 +16,7 @@ const PARTIALS_DIR = path.join(ROOT_DIR, "templates", "partials");
 export const OUTPUT_DIR = path.join(ROOT_DIR, "output");
 
 type Version = "20x" | "rev5";
+type EffectiveAudience = Version | "both";
 
 interface RulesDocument {
   info?: {
@@ -49,7 +50,7 @@ interface InfoSource {
   name: string;
   short_name?: string;
   web_name: string;
-  effective?: Partial<Record<Version, EffectiveEntrySource>>;
+  effective?: Partial<Record<EffectiveAudience, EffectiveEntrySource>>;
   labels?: Record<string, { name?: string; description?: string }>;
 }
 
@@ -163,7 +164,7 @@ interface KsiThemeSource {
 }
 
 interface EffectiveEntryViewModel {
-  versionLabel: string;
+  audienceLabel: string;
   statusLabel: string;
   currentStatus?: string;
   dateLines: Array<{ label: string; value: string }>;
@@ -313,6 +314,10 @@ function humanizeVersion(version: Version): string {
   return version === "20x" ? "20x" : "Rev5";
 }
 
+function humanizeVersions(versions: Version[]): string {
+  return versions.map(humanizeVersion).join(" and ");
+}
+
 function humanizeStatus(value?: string): string {
   if (!value) {
     return "Unknown";
@@ -323,6 +328,15 @@ function humanizeStatus(value?: string): string {
 
 function isApplicable(entry?: EffectiveEntrySource): boolean {
   return Boolean(entry?.is && entry.is.toLowerCase() !== "no");
+}
+
+function effectiveEntryForVersion(
+  effective:
+    | Partial<Record<EffectiveAudience, EffectiveEntrySource>>
+    | undefined,
+  version: Version,
+): EffectiveEntrySource | undefined {
+  return effective?.both ?? effective?.[version];
 }
 
 function slugifyTerm(term: string): string {
@@ -365,9 +379,17 @@ function toClassApplicabilityLines(
 }
 
 function toEffectiveEntries(
-  effective: Partial<Record<Version, EffectiveEntrySource>> | undefined,
+  effective:
+    | Partial<Record<EffectiveAudience, EffectiveEntrySource>>
+    | undefined,
   versions: Version[],
 ): EffectiveEntryViewModel[] {
+  if (effective?.both) {
+    return [
+      toEffectiveEntryViewModel(effective.both, humanizeVersions(versions)),
+    ];
+  }
+
   return versions
     .map((version): EffectiveEntryViewModel | null => {
       const entry = effective?.[version];
@@ -375,26 +397,33 @@ function toEffectiveEntries(
         return null;
       }
 
-      const viewModel: EffectiveEntryViewModel = {
-        versionLabel: humanizeVersion(version),
-        statusLabel: humanizeStatus(entry.is),
-        dateLines: toDateLines(entry.date),
-        classLines: toClassApplicabilityLines(entry.class),
-        comments: entry.comments ?? [],
-        warnings: entry.warnings ?? [],
-      };
-
-      if (entry.current_status) {
-        viewModel.currentStatus = entry.current_status;
-      }
-
-      if (entry.signup_url) {
-        viewModel.signupUrl = entry.signup_url;
-      }
-
-      return viewModel;
+      return toEffectiveEntryViewModel(entry, humanizeVersion(version));
     })
     .filter((entry): entry is EffectiveEntryViewModel => entry !== null);
+}
+
+function toEffectiveEntryViewModel(
+  entry: EffectiveEntrySource,
+  audienceLabel: string,
+): EffectiveEntryViewModel {
+  const viewModel: EffectiveEntryViewModel = {
+    audienceLabel,
+    statusLabel: humanizeStatus(entry.is),
+    dateLines: toDateLines(entry.date),
+    classLines: toClassApplicabilityLines(entry.class),
+    comments: entry.comments ?? [],
+    warnings: entry.warnings ?? [],
+  };
+
+  if (entry.current_status) {
+    viewModel.currentStatus = entry.current_status;
+  }
+
+  if (entry.signup_url) {
+    viewModel.signupUrl = entry.signup_url;
+  }
+
+  return viewModel;
 }
 
 function toChangeLog(updated: ChangeLogSource[] = []) {
@@ -857,7 +886,10 @@ export function collectArtifacts(rules: RulesDocument): BuildArtifact[] {
 
   for (const document of Object.values(rules.FRR)) {
     for (const version of ["20x", "rev5"] as const) {
-      const effectiveEntry = document.info.effective?.[version];
+      const effectiveEntry = effectiveEntryForVersion(
+        document.info.effective,
+        version,
+      );
       if (!isApplicable(effectiveEntry)) {
         continue;
       }

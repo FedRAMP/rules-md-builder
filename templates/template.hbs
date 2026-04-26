@@ -2,7 +2,7 @@
 
 {{#if effectiveEntries.length}}
 {{#each effectiveEntries}}
-!!! info "Effective Date(s) & Overall Applicability for {{versionLabel}}"
+!!! info "Effective Date(s) & Overall Applicability for {{audienceLabel}}"
     - **{{statusLabel}}**{{#if currentStatus}} ({{currentStatus}}){{/if}}
 {{#each dateLines}}
     - **{{label}}:** {{value}}
@@ -21,7 +21,7 @@
 {{/each}}
 
 {{#if warnings.length}}
-!!! danger "Mandatory Adoption for {{versionLabel}}"
+!!! danger "Mandatory Adoption for {{audienceLabel}}"
 {{#each warnings}}
     - {{this}}
 {{/each}}

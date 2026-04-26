@@ -98,6 +98,26 @@ describe("build-markdown", () => {
     expect(requirementContents).toContain('{ data-preview }');
     expect(requirementContents).toContain("../definitions/#");
 
+    expect(definitionsContents).toContain(
+      '!!! info "Effective Date(s) & Overall Applicability for 20x and Rev5"',
+    );
+
+    const sharedTwentyXContents = await readFile(
+      path.join(OUTPUT_DIR, "20x", "fedramp-security-inbox.md"),
+      "utf8",
+    );
+    expect(sharedTwentyXContents).toContain(
+      '!!! info "Effective Date(s) & Overall Applicability for 20x"',
+    );
+
+    const sharedRev5Contents = await readFile(
+      path.join(OUTPUT_DIR, "rev5", "fedramp-security-inbox.md"),
+      "utf8",
+    );
+    expect(sharedRev5Contents).toContain(
+      '!!! info "Effective Date(s) & Overall Applicability for Rev5"',
+    );
+
     const nonApplicableRev5Path = path.join(
       OUTPUT_DIR,
       "rev5",
